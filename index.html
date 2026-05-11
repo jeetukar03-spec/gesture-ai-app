@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>GestureAI</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --card: #16161f;
+    --border: #2a2a3a;
+    --accent: #7c6cfc;
+    --accent2: #fc6cc8;
+    --green: #4effa0;
+    --text: #f0f0ff;
+    --muted: #6b6b8a;
+    --radius: 18px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
+
+  /* ── SCREENS ── */
+  .screen { position: fixed; inset: 0; display: flex; flex-direction: column; transition: opacity .35s ease, transform .35s ease; }
+  .screen.hidden { opacity: 0; pointer-events: none; transform: scale(.97); }
+
+  /* ── START MENU ── */
+  #startScreen {
+    background: var(--bg);
+    background-image: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(124,108,252,.18) 0%, transparent 70%);
+  }
+
+  .start-topbar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .app-brand { font-family: 'Space Mono', monospace; font-size: 17px; letter-spacing: -0.5px; color: var(--text); }
+  .app-brand span { color: var(--accent); }
+
+  .btn-exit {
+    font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 1px;
+    background: transparent; border: 1px solid #ff4466; color: #ff4466;
+    padding: 6px 14px; border-radius: 8px; cursor: pointer;
+    transition: background .2s, color .2s;
+  }
+  .btn-exit:hover, .btn-exit:active { background: #ff4466; color: #fff; }
+
+  .start-body {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 24px 28px; gap: 28px; overflow-y: auto;
+  }
+
+  .hero-icon {
+    width: 96px; height: 96px; border-radius: 28px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 46px; box-shadow: 0 0 48px rgba(124,108,252,.35);
+    animation: pulse 3s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 48px rgba(124,108,252,.35)} 50%{box-shadow:0 0 72px rgba(124,108,252,.55)} }
+
+  .hero-title {
+    font-family: 'Space Mono', monospace; font-size: clamp(26px, 7vw, 36px);
+    font-weight: 700; text-align: center; letter-spacing: -1px;
+    background: linear-gradient(90deg, var(--text), var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero-sub { font-size: 14px; color: var(--muted); text-align: center; line-height: 1.6; max-width: 300px; }
+
+  .gesture-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; max-width: 360px;
+  }
+  .gesture-chip {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 10px 12px; display: flex; align-items: center; gap: 10px;
+  }
+  .gesture-chip .emoji { font-size: 22px; }
+  .gesture-chip .gname { font-size: 13px; font-weight: 500; color: var(--text); }
+  .gesture-chip .gdesc { font-size: 10px; color: var(--muted); }
+
+  .btn-start {
+    width: 100%; max-width: 360px; padding: 16px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none; border-radius: var(--radius); color: #fff;
+    font-family: 'Space Mono', monospace; font-size: 15px; font-weight: 700;
+    letter-spacing: 1px; cursor: pointer;
+    box-shadow: 0 8px 32px rgba(124,108,252,.4);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .btn-start:active { transform: scale(.97); box-shadow: 0 4px 16px rgba(124,108,252,.3); }
+
+  .start-footer {
+    padding: 18px 24px; border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: 14px;
+  }
+  .profile-img {
+    width: 46px; height: 46px; border-radius: 50%;
+    border: 2px solid var(--accent);
+    object-fit: cover; background: var(--card);
+    flex-shrink: 0; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .footer-credit { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .footer-credit strong { color: var(--text); font-weight: 600; font-size: 13px; display: block; }
+
+  /* ── APP SCREEN ── */
+  #appScreen { background: var(--bg); }
+
+  .app-topbar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 16px; background: var(--surface);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .app-title { font-family: 'Space Mono', monospace; font-size: 14px; color: var(--text); }
+  .btn-back {
+    background: var(--card); border: 1px solid var(--border); color: var(--muted);
+    padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: color .2s, border-color .2s;
+  }
+  .btn-back:active { color: var(--text); border-color: var(--accent); }
+
+  .cam-wrap {
+    position: relative; width: 100%; background: #000;
+    flex-shrink: 0;
+  }
+  .cam-wrap video, .cam-wrap canvas {
+    width: 100%; display: block;
+  }
+  .cam-wrap canvas { position: absolute; top: 0; left: 0; height: 100%; }
+
+  /* status badge */
+  .status-badge {
+    position: absolute; top: 10px; left: 10px;
+    background: rgba(10,10,15,.75); backdrop-filter: blur(6px);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 5px 10px; font-size: 11px; font-family: 'Space Mono', monospace;
+    color: var(--muted); display: flex; align-items: center; gap: 6px;
+  }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+  .status-dot.live { background: var(--green); box-shadow: 0 0 6px var(--green); animation: blink 1.5s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* hand count */
+  .hand-count {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(10,10,15,.75); backdrop-filter: blur(6px);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 5px 10px; font-size: 11px; font-family: 'Space Mono', monospace; color: var(--muted);
+  }
+
+  /* gesture panel */
+  .gesture-panel {
+    flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
+  }
+
+  .gesture-display {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px 18px; display: flex; align-items: center; gap: 16px;
+    transition: border-color .3s;
+  }
+  .gesture-display.detected { border-color: var(--accent); box-shadow: 0 0 20px rgba(124,108,252,.2); }
+  .gesture-big-emoji { font-size: 52px; line-height: 1; filter: drop-shadow(0 0 12px rgba(124,108,252,.5)); }
+  .gesture-info { flex: 1; }
+  .gesture-label {
+    font-family: 'Space Mono', monospace; font-size: 20px; font-weight: 700;
+    background: linear-gradient(90deg, var(--text), var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .gesture-desc { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .gesture-conf {
+    font-size: 11px; font-family: 'Space Mono', monospace; color: var(--green); margin-top: 6px;
+  }
+
+  /* finger states */
+  .finger-states {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px;
+  }
+  .finger-states-title { font-size: 11px; color: var(--muted); font-family: 'Space Mono', monospace; margin-bottom: 10px; letter-spacing: 1px; }
+  .fingers-row { display: flex; gap: 8px; }
+  .finger-item { flex: 1; text-align: center; }
+  .finger-circle {
+    width: 36px; height: 36px; border-radius: 50%; margin: 0 auto 4px;
+    border: 2px solid var(--border); display: flex; align-items: center; justify-content: center;
+    font-size: 16px; transition: border-color .2s, background .2s;
+  }
+  .finger-circle.open { border-color: var(--green); background: rgba(78,255,160,.12); }
+  .finger-circle.closed { border-color: var(--border); background: var(--surface); }
+  .finger-name { font-size: 9px; color: var(--muted); }
+
+  /* stats row */
+  .stats-row { display: flex; gap: 10px; }
+  .stat-card {
+    flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 12px 10px; text-align: center;
+  }
+  .stat-val { font-family: 'Space Mono', monospace; font-size: 20px; font-weight: 700; color: var(--accent); }
+  .stat-key { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  /* history */
+  .history-wrap {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px;
+  }
+  .history-title { font-size: 11px; color: var(--muted); font-family: 'Space Mono', monospace; margin-bottom: 10px; letter-spacing: 1px; }
+  .history-chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; }
+  .history-chip {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 4px 10px; font-size: 12px; animation: popIn .2s ease;
+  }
+  @keyframes popIn { from{opacity:0;transform:scale(.8)} to{opacity:1;transform:scale(1)} }
+
+  /* loading overlay */
+  #loadingOverlay {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 20px; z-index: 100;
+  }
+  #loadingOverlay.hidden { display: none; }
+  .load-spinner {
+    width: 56px; height: 56px; border-radius: 50%;
+    border: 3px solid var(--border); border-top-color: var(--accent);
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .load-text { font-family: 'Space Mono', monospace; font-size: 13px; color: var(--muted); text-align: center; padding: 0 32px; }
+
+  /* error toast */
+  #errorToast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #2a0a14; border: 1px solid #ff4466; color: #ff4466;
+    padding: 12px 20px; border-radius: 12px; font-size: 13px;
+    max-width: 320px; text-align: center; z-index: 200;
+    transition: opacity .3s;
+  }
+  #errorToast.hidden { opacity: 0; pointer-events: none; }
+
+  /* permission screen */
+  #permScreen {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 20px; padding: 32px; z-index: 90;
+  }
+  #permScreen.hidden { display: none; }
+  .perm-icon { font-size: 56px; }
+  .perm-title { font-family: 'Space Mono', monospace; font-size: 18px; text-align: center; }
+  .perm-desc { font-size: 14px; color: var(--muted); text-align: center; line-height: 1.6; }
+  .btn-allow {
+    padding: 14px 40px; background: var(--accent); border: none; border-radius: 14px;
+    color: #fff; font-family: 'Space Mono', monospace; font-size: 14px; cursor: pointer;
+    transition: opacity .2s;
+  }
+  .btn-allow:active { opacity: .8; }
+</style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div id="loadingOverlay">
+  <div class="load-spinner"></div>
+  <div class="load-text">Loading AI model…<br><span style="font-size:11px;color:#3a3a5a">MediaPipe Hands · WASM · WebGL</span></div>
+</div>
+
+<!-- Permission screen -->
+<div id="permScreen" class="hidden">
+  <div class="perm-icon">📷</div>
+  <div class="perm-title">Camera Access Needed</div>
+  <div class="perm-desc">GestureAI needs your camera to detect hand gestures in real-time. Everything runs locally — nothing is uploaded.</div>
+  <button class="btn-allow" onclick="requestCam()">Allow Camera</button>
+  <div style="font-size:12px;color:#3a3a5a">Runs 100% on-device · No data leaves your phone</div>
+</div>
+
+<!-- Error toast -->
+<div id="errorToast" class="hidden"></div>
+
+<!-- ═══════════════ START SCREEN ═══════════════ -->
+<div id="startScreen" class="screen">
+  <div class="start-topbar">
+    <div class="app-brand">Gesture<span>AI</span></div>
+    <button class="btn-exit" onclick="exitApp()">✕ EXIT</button>
+  </div>
+
+  <div class="start-body">
+    <div class="hero-icon">🖐</div>
+    <div>
+      <div class="hero-title">GestureAI</div>
+      <div style="height:6px"></div>
+      <div class="hero-sub">Real-time hand gesture recognition powered by on-device AI. No internet required.</div>
+    </div>
+
+    <div class="gesture-grid">
+      <div class="gesture-chip"><span class="emoji">✋</span><div><div class="gname">Open Palm</div><div class="gdesc">All fingers up</div></div></div>
+      <div class="gesture-chip"><span class="emoji">✊</span><div><div class="gname">Fist</div><div class="gdesc">All fingers curled</div></div></div>
+      <div class="gesture-chip"><span class="emoji">👍</span><div><div class="gname">Thumbs Up</div><div class="gdesc">Thumb extended</div></div></div>
+      <div class="gesture-chip"><span class="emoji">✌️</span><div><div class="gname">Peace / V</div><div class="gdesc">Index + middle</div></div></div>
+      <div class="gesture-chip"><span class="emoji">👆</span><div><div class="gname">Pointing</div><div class="gdesc">Index only</div></div></div>
+      <div class="gesture-chip"><span class="emoji">🤘</span><div><div class="gname">Rock On</div><div class="gdesc">Index + pinky</div></div></div>
+      <div class="gesture-chip"><span class="emoji">👌</span><div><div class="gname">OK Sign</div><div class="gdesc">Pinch circle</div></div></div>
+      <div class="gesture-chip"><span class="emoji">🤙</span><div><div class="gname">Call Me</div><div class="gdesc">Thumb + pinky</div></div></div>
+    </div>
+
+    <button class="btn-start" onclick="startApp()">▶ START DETECTING</button>
+
+    <div style="font-size:11px;color:#3a3a5a;text-align:center">On-device AI · No cloud · Works offline</div>
+  </div>
+
+  <div class="start-footer">
+    <div class="profile-img" id="profileImg">🧑</div>
+    <div class="footer-credit">
+      <strong>Arkaprabha Kar</strong>
+      App designed and created by Arkaprabha Kar
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ APP SCREEN ═══════════════ -->
+<div id="appScreen" class="screen hidden">
+  <div class="app-topbar">
+    <div class="app-title">🖐 GestureAI</div>
+    <button class="btn-back" onclick="goBack()">← Back</button>
+  </div>
+
+  <div class="cam-wrap" id="camWrap">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas"></canvas>
+    <div class="status-badge"><div class="status-dot" id="statusDot"></div><span id="statusText">Starting…</span></div>
+    <div class="hand-count" id="handCount">0 hands</div>
+  </div>
+
+  <div class="gesture-panel">
+    <div class="gesture-display" id="gestureDisplay">
+      <div class="gesture-big-emoji" id="gestureEmoji">🖐</div>
+      <div class="gesture-info">
+        <div class="gesture-label" id="gestureLabel">Waiting…</div>
+        <div class="gesture-desc" id="gestureDesc">Show your hand to the camera</div>
+        <div class="gesture-conf" id="gestureConf"></div>
+      </div>
+    </div>
+
+    <div class="finger-states">
+      <div class="finger-states-title">FINGER STATES</div>
+      <div class="fingers-row">
+        <div class="finger-item"><div class="finger-circle" id="fThumb">👍</div><div class="finger-name">Thumb</div></div>
+        <div class="finger-item"><div class="finger-circle" id="fIndex">☝️</div><div class="finger-name">Index</div></div>
+        <div class="finger-item"><div class="finger-circle" id="fMiddle">🖕</div><div class="finger-name">Middle</div></div>
+        <div class="finger-item"><div class="finger-circle" id="fRing">💍</div><div class="finger-name">Ring</div></div>
+        <div class="finger-item"><div class="finger-circle" id="fPinky">🤙</div><div class="finger-name">Pinky</div></div>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-val" id="statFps">0</div><div class="stat-key">FPS</div></div>
+      <div class="stat-card"><div class="stat-val" id="statTotal">0</div><div class="stat-key">Detected</div></div>
+      <div class="stat-card"><div class="stat-val" id="statHands">0</div><div class="stat-key">Hands</div></div>
+    </div>
+
+    <div class="history-wrap">
+      <div class="history-title">RECENT GESTURES</div>
+      <div class="history-chips" id="historyChips"><span style="font-size:12px;color:#3a3a5a">None yet…</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- MediaPipe -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1620248257/drawing_utils.js" crossorigin="anonymous"></script>
+
+<script>
+/* ─── DOM refs ─── */
+const startScreen   = document.getElementById('startScreen');
+const appScreen     = document.getElementById('appScreen');
+const loadingOverlay= document.getElementById('loadingOverlay');
+const permScreen    = document.getElementById('permScreen');
+const errorToast    = document.getElementById('errorToast');
+const video         = document.getElementById('video');
+const canvas        = document.getElementById('canvas');
+const ctx           = canvas.getContext('2d');
+const statusDot     = document.getElementById('statusDot');
+const statusText    = document.getElementById('statusText');
+const handCount     = document.getElementById('handCount');
+const gestureDisplay= document.getElementById('gestureDisplay');
+const gestureEmoji  = document.getElementById('gestureEmoji');
+const gestureLabel  = document.getElementById('gestureLabel');
+const gestureDesc   = document.getElementById('gestureDesc');
+const gestureConf   = document.getElementById('gestureConf');
+const historyChips  = document.getElementById('historyChips');
+const statFps       = document.getElementById('statFps');
+const statTotal     = document.getElementById('statTotal');
+const statHands     = document.getElementById('statHands');
+const fEls          = {thumb:document.getElementById('fThumb'),index:document.getElementById('fIndex'),middle:document.getElementById('fMiddle'),ring:document.getElementById('fRing'),pinky:document.getElementById('fPinky')};
+
+/* ─── State ─── */
+let hands, camera;
+let totalDetected = 0;
+let history = [];
+let lastGesture = '';
+let fpsArr = [];
+let lastFrame = performance.now();
+let modelReady = false;
+let camStream = null;
+let appStarted = false;
+
+/* ─── Gesture definitions ─── */
+const GESTURES = {
+  'Open Palm':  { emoji:'✋', desc:'All five fingers extended', fingers:[1,1,1,1,1] },
+  'Fist':       { emoji:'✊', desc:'All fingers curled in',     fingers:[0,0,0,0,0] },
+  'Thumbs Up':  { emoji:'👍', desc:'Thumb up, others curled',  fingers:[1,0,0,0,0] },
+  'Peace / V':  { emoji:'✌️', desc:'Index & middle extended',  fingers:[0,1,1,0,0] },
+  'Pointing':   { emoji:'👆', desc:'Only index finger up',     fingers:[0,1,0,0,0] },
+  'Rock On':    { emoji:'🤘', desc:'Index & pinky extended',   fingers:[0,1,0,0,1] },
+  'OK Sign':    { emoji:'👌', desc:'Thumb & index pinch',      fingers:null },
+  'Call Me':    { emoji:'🤙', desc:'Thumb & pinky extended',   fingers:[1,0,0,0,1] },
+  'Three':      { emoji:'3️⃣', desc:'Three fingers up',        fingers:[0,1,1,1,0] },
+  'Four':       { emoji:'4️⃣', desc:'Four fingers up',         fingers:[0,1,1,1,1] },
+  'Thumb Down': { emoji:'👎', desc:'Thumb down gesture',       fingers:null },
+  'Spider-Man': { emoji:'🕷', desc:'Index, middle & pinky',    fingers:[0,1,1,0,1] },
+  'Gun':        { emoji:'🔫', desc:'Index + thumb out',        fingers:[1,1,0,0,0] },
+};
+
+/* ─── Landmark indices ─── */
+const LM = { WRIST:0, THUMB_CMC:1,THUMB_MCP:2,THUMB_IP:3,THUMB_TIP:4, INDEX_MCP:5,INDEX_PIP:6,INDEX_DIP:7,INDEX_TIP:8, MIDDLE_MCP:9,MIDDLE_PIP:10,MIDDLE_DIP:11,MIDDLE_TIP:12, RING_MCP:13,RING_PIP:14,RING_DIP:15,RING_TIP:16, PINKY_MCP:17,PINKY_PIP:18,PINKY_DIP:19,PINKY_TIP:20 };
+
+function dist(a, b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+
+function fingerExtended(lm, tip, pip, mcp, wrist){
+  return lm[tip].y < lm[pip].y;
+}
+function thumbExtended(lm){
+  return lm[LM.THUMB_TIP].x < lm[LM.THUMB_IP].x;
+}
+
+function classifyGesture(lm, hand){
+  const isRight = hand === 'Right';
+  const thumb  = isRight ? lm[LM.THUMB_TIP].x < lm[LM.THUMB_IP].x : lm[LM.THUMB_TIP].x > lm[LM.THUMB_IP].x;
+  const index  = lm[LM.INDEX_TIP].y  < lm[LM.INDEX_PIP].y;
+  const middle = lm[LM.MIDDLE_TIP].y < lm[LM.MIDDLE_PIP].y;
+  const ring   = lm[LM.RING_TIP].y   < lm[LM.RING_PIP].y;
+  const pinky  = lm[LM.PINKY_TIP].y  < lm[LM.PINKY_PIP].y;
+  const fingers = [+thumb,+index,+middle,+ring,+pinky];
+
+  // OK sign: thumb & index tips close
+  const okDist = dist(lm[LM.THUMB_TIP], lm[LM.INDEX_TIP]);
+  if(okDist < 0.07 && middle && ring && pinky) return {name:'OK Sign', fingers};
+
+  // Thumb down: thumb lower than wrist, others curled
+  if(thumb && !index && !middle && !ring && !pinky){
+    if(lm[LM.THUMB_TIP].y > lm[LM.WRIST].y + 0.05) return {name:'Thumb Down', fingers};
+    return {name:'Thumbs Up', fingers};
+  }
+
+  // Match fingerprint
+  const match = Object.entries(GESTURES).find(([name, g]) => {
+    if(!g.fingers) return false;
+    return g.fingers.every((v,i) => v === fingers[i]);
+  });
+  if(match) return {name: match[0], fingers};
+
+  // Unknown
+  return {name: fingers.some(Boolean) ? 'Custom Pose' : 'Fist', fingers};
+}
+
+/* ─── Update UI ─── */
+function updateGestureUI(name, fingerArr){
+  const g = GESTURES[name] || {emoji:'🤚', desc:'Custom hand pose'};
+  gestureEmoji.textContent = g.emoji;
+  gestureLabel.textContent = name;
+  gestureDesc.textContent  = g.desc;
+  gestureConf.textContent  = '● DETECTED';
+  gestureDisplay.classList.add('detected');
+
+  const keys = ['thumb','index','middle','ring','pinky'];
+  const emojis = ['👍','☝️','🖕','💍','🤙'];
+  keys.forEach((k,i) => {
+    const el = fEls[k];
+    if(fingerArr[i]){ el.classList.add('open'); el.classList.remove('closed'); }
+    else            { el.classList.remove('open'); el.classList.add('closed'); }
+  });
+
+  if(name !== lastGesture && name !== 'Custom Pose'){
+    lastGesture = name;
+    totalDetected++;
+    statTotal.textContent = totalDetected;
+    history.unshift(g.emoji + ' ' + name);
+    if(history.length > 8) history.pop();
+    historyChips.innerHTML = history.map(h => `<span class="history-chip">${h}</span>`).join('');
+  }
+}
+
+function clearGestureUI(){
+  gestureEmoji.textContent = '🖐';
+  gestureLabel.textContent = 'Waiting…';
+  gestureDesc.textContent  = 'Show your hand to the camera';
+  gestureConf.textContent  = '';
+  gestureDisplay.classList.remove('detected');
+  lastGesture = '';
+  Object.values(fEls).forEach(el => { el.classList.remove('open','closed'); });
+}
+
+/* ─── MediaPipe callback ─── */
+function onResults(results){
+  const now = performance.now();
+  const dt = now - lastFrame; lastFrame = now;
+  fpsArr.push(1000/dt); if(fpsArr.length > 15) fpsArr.shift();
+  statFps.textContent = Math.round(fpsArr.reduce((a,b)=>a+b,0)/fpsArr.length);
+
+  canvas.width  = video.videoWidth  || canvas.offsetWidth;
+  canvas.height = video.videoHeight || canvas.offsetHeight;
+
+  ctx.save();
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const n = results.multiHandLandmarks ? results.multiHandLandmarks.length : 0;
+  handCount.textContent = n + (n===1?' hand':' hands');
+  statHands.textContent = n;
+
+  if(n === 0){ clearGestureUI(); ctx.restore(); return; }
+
+  results.multiHandLandmarks.forEach((lm, i) => {
+    const handedness = results.multiHandedness[i].label;
+
+    // Draw connections
+    drawConnectors(ctx, lm, HAND_CONNECTIONS, {color:'rgba(124,108,252,0.6)', lineWidth:2});
+    // Draw landmarks
+    drawLandmarks(ctx, lm, {color:'#fc6cc8', fillColor:'rgba(252,108,200,0.3)', lineWidth:1, radius:4});
+
+    // Classify
+    const {name, fingers} = classifyGesture(lm, handedness);
+    if(i===0) updateGestureUI(name, fingers);
+  });
+
+  ctx.restore();
+}
+
+/* ─── Init MediaPipe ─── */
+function initMediaPipe(){
+  hands = new Hands({locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${f}`});
+  hands.setOptions({maxNumHands:2, modelComplexity:1, minDetectionConfidence:0.7, minTrackingConfidence:0.6});
+  hands.onResults(onResults);
+  hands.initialize().then(() => {
+    modelReady = true;
+    loadingOverlay.classList.add('hidden');
+    permScreen.classList.remove('hidden');
+  }).catch(e => {
+    showError('Model failed to load: '+e.message);
+    loadingOverlay.classList.add('hidden');
+  });
+}
+
+/* ─── Camera ─── */
+async function requestCam(){
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false});
+    video.srcObject = camStream;
+    await video.play();
+    permScreen.classList.add('hidden');
+    startDetection();
+  } catch(e){
+    showError('Camera error: '+e.message);
+  }
+}
+
+function startDetection(){
+  statusDot.classList.add('live');
+  statusText.textContent = 'Live';
+  camera = new Camera(video, {
+    onFrame: async () => { if(modelReady) await hands.send({image: video}); },
+    width: 640, height: 480
+  });
+  camera.start();
+
+  // Match canvas size to video display size
+  const ro = new ResizeObserver(() => {
+    canvas.style.width  = video.offsetWidth  + 'px';
+    canvas.style.height = video.offsetHeight + 'px';
+  });
+  ro.observe(video);
+}
+
+function stopDetection(){
+  if(camera){ try{ camera.stop(); }catch(e){} camera=null; }
+  if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream=null; }
+  if(hands){ try{ hands.close(); }catch(e){} }
+  modelReady = false;
+  statusDot.classList.remove('live');
+  statusText.textContent = 'Stopped';
+}
+
+/* ─── Navigation ─── */
+function startApp(){
+  startScreen.classList.add('hidden');
+  appScreen.classList.remove('hidden');
+  if(!appStarted){ appStarted=true; initMediaPipe(); }
+  else { permScreen.classList.remove('hidden'); }
+}
+
+function goBack(){
+  stopDetection();
+  appScreen.classList.add('hidden');
+  startScreen.classList.remove('hidden');
+  appStarted = false;
+  clearGestureUI();
+  statFps.textContent='0'; statTotal.textContent='0'; statHands.textContent='0';
+  historyChips.innerHTML='<span style="font-size:12px;color:#3a3a5a">None yet…</span>';
+  history=[]; totalDetected=0; lastGesture='';
+}
+
+function exitApp(){
+  if(confirm('Exit GestureAI?')) window.close();
+}
+
+/* ─── Error toast ─── */
+function showError(msg){
+  errorToast.textContent = msg;
+  errorToast.classList.remove('hidden');
+  setTimeout(()=>errorToast.classList.add('hidden'), 5000);
+}
+
+/* ─── Init: hide loading once page ready ─── */
+window.addEventListener('load', () => {
+  loadingOverlay.classList.add('hidden');
+});
+</script>
+</body>
+</html>
