@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>GestureAI</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --card: #16161f;
+    --border: #2a2a3a;
+    --accent: #7c6cfc;
+    --accent2: #fc6cc8;
+    --green: #4effa0;
+    --text: #f0f0ff;
+    --muted: #6b6b8a;
+    --radius: 18px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
+
+  .screen { position: fixed; inset: 0; display: flex; flex-direction: column; transition: opacity .35s ease, transform .35s ease; }
+  .screen.hidden { opacity: 0; pointer-events: none; transform: scale(.97); }
+
+  #startScreen {
+    background: var(--bg);
+    background-image: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(124,108,252,.18) 0%, transparent 70%);
+  }
+
+  .start-topbar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .app-brand { font-family: 'Space Mono', monospace; font-size: 17px; letter-spacing: -0.5px; color: var(--text); }
+  .app-brand span { color: var(--accent); }
+
+  .btn-exit {
+    font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 1px;
+    background: transparent; border: 1px solid #ff4466; color: #ff4466;
+    padding: 6px 14px; border-radius: 8px; cursor: pointer;
+    transition: background .2s, color .2s;
+  }
+  .btn-exit:hover, .btn-exit:active { background: #ff4466; color: #fff; }
+
+  .start-body {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 24px 28px; gap: 28px; overflow-y: auto;
+  }
+
+  .hero-icon {
+    width: 96px; height: 96px; border-radius: 28px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 46px; box-shadow: 0 0 48px rgba(124,108,252,.35);
+    animation: pulse 3s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 48px rgba(124,108,252,.35)} 50%{box-shadow:0 0 72px rgba(124,108,252,.55)} }
+
+  .hero-title {
+    font-family: 'Space Mono', monospace; font-size: clamp(26px, 7vw, 36px);
+    font-weight: 700; text-align: center; letter-spacing: -1px;
+    background: linear-gradient(90deg, var(--text), var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero-sub { font-size: 14px; color: var(--muted); text-align: center; line-height: 1.6; max-width: 300px; }
+
+  .gesture-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; max-width: 360px;
+  }
+  .gesture-chip {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 10px 12px; display: flex; align-items: center; gap: 10px;
+  }
+  .gesture-chip .emoji { font-size: 22px; }
+  .gesture-chip .gname { font-size: 13px; font-weight: 500; color: var(--text); }
+  .gesture-chip .gdesc { font-size: 10px; color: var(--muted); }
+
+  .btn-start {
+    width: 100%; max-width: 360px; padding: 16px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none; border-radius: var(--radius); color: #fff;
+    font-family: 'Space Mono', monospace; font-size: 15px; font-weight: 700;
+    letter-spacing: 1px; cursor: pointer;
+    box-shadow: 0 8px 32px rgba(124,108,252,.4);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .btn-start:active { transform: scale(.97); box-shadow: 0 4px 16px rgba(124,108,252,.3); }
+
+  .start-footer {
+    padding: 18px 24px; border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: 14px;
+  }
+  .profile-img {
+    width: 46px; height: 46px; border-radius: 50%;
+    border: 2px solid var(--accent);
+    object-fit: cover; background: var(--card);
+    flex-shrink: 0; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .footer-credit { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .footer-credit strong { color: var(--text); font-weight: 600; font-size: 13px; display: block; }
+
+  #appScreen { background: var(--bg); }
+
+  .app-topbar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 16px; background: var(--surface);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .app-title { font-family: 'Space Mono', monospace; font-size: 14px; color: var(--text); }
+  .btn-back {
+    background: var(--card); border: 1px solid var(--border); color: var(--muted);
+    padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: color .2s, border-color .2s;
+  }
+  .btn-back:active { color: var(--text); border-color: var(--accent); }
+
+  .cam-wrap {
+    position: relative; width: 100%; background: #000; flex-shrink: 0;
+    min-height: 240px;
+  }
+  .cam-wrap video { width: 100%; display: block; min-height: 240px; object-fit: cover; }
+  .cam-wrap canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+  .status-badge {
+    position: absolute; top: 10px; left: 10px;
+    background: rgba(10,10,15,.85); backdrop-filter: blur(6px);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 5px 10px; font-size: 11px; font-family: 'Space Mono', monospace;
+    color: var(--muted); display: flex; align-items: center; gap: 6px; z-index: 10;
+  }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink:0; }
+  .status-dot.live { background: var(--green); box-shadow: 0 0 6px var(--green); animation: blink 1.5s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  .hand-count {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(10,10,15,.85); backdrop-filter: blur(6px);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 5px 10px; font-size: 11px; font-family: 'Space Mono', monospace; color: var(--muted); z-index: 10;
+  }
+
+  .gesture-panel {
+    flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
+  }
+
+  .gesture-display {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px 18px; display: flex; align-items: center; gap: 16px;
+    transition: border-color .3s;
+  }
+  .gesture-display.detected { border-color: var(--accent); box-shadow: 0 0 20px rgba(124,108,252,.2); }
+  .gesture-big-emoji { font-size: 52px; line-height: 1; filter: drop-shadow(0 0 12px rgba(124,108,252,.5)); }
+  .gesture-info { flex: 1; }
+  .gesture-label {
+    font-family: 'Space Mono', monospace; font-size: 20px; font-weight: 700;
+    background: linear-gradient(90deg, var(--text), var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .gesture-desc { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .gesture-conf { font-size: 11px; font-family: 'Space Mono', monospace; color: var(--green); margin-top: 6px; }
+
+  .finger-states {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px;
+  }
+  .finger-states-title { font-size: 11px; color: var(--muted); font-family: 'Space Mono', monospace; margin-bottom: 10px; letter-spacing: 1px; }
+  .fingers-row { display: flex; gap: 8px; }
+  .finger-item { flex: 1; text-align: center; }
+  .finger-circle {
+    width: 36px; height: 36px; border-radius: 50%; margin: 0 auto 4px;
+    border: 2px solid var(--border); display: flex; align-items: center; justify-content: center;
+    font-size: 16px; transition: border-color .2s, background .2s;
+  }
+  .finger-circle.open { border-color: var(--green); background: rgba(78,255,160,.12); }
+  .finger-circle.closed { border-color: var(--border); background: var(--surface); }
+  .finger-name { font-size: 9px; color: var(--muted); }
+
+  .stats-row { display: flex; gap: 10px; }
+  .stat-card {
+    flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 12px 10px; text-align: center;
+  }
+  .stat-val { font-family: 'Space Mono', monospace; font-size: 20px; font-weight: 700; color: var(--accent); }
+  .stat-key { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  .history-wrap {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px;
+  }
+  .history-title { font-size: 11px; color: var(--muted); font-family: 'Space Mono', monospace; margin-bottom: 10px; letter-spacing: 1px; }
+  .history-chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; }
+  .history-chip {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 4px 10px; font-size: 12px; animation: popIn .2s ease;
+  }
+  @keyframes popIn { from{opacity:0;transform:scale(.8)} to{opacity:1;transform:scale(1)} }
+
+  /* ── LOADING OVERLAY ── */
+  #loadingOverlay {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 20px; z-index: 100;
+  }
+  #loadingOverlay.hidden { display: none; }
+  .load-spinner {
+    width: 56px; height: 56px; border-radius: 50%;
+    border: 3px solid var(--border); border-top-color: var(--accent);
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .load-text { font-family: 'Space Mono', monospace; font-size: 13px; color: var(--muted); text-align: center; padding: 0 32px; }
+
+  /* ── PERMISSION SCREEN ── */
+  #permScreen {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px; padding: 32px; z-index: 90;
+  }
+  #permScreen.hidden { display: none; }
+  .perm-icon { font-size: 64px; }
+  .perm-title { font-family: 'Space Mono', monospace; font-size: 20px; text-align: center; color: var(--text); }
+  .perm-desc { font-size: 14px; color: var(--muted); text-align: center; line-height: 1.7; max-width: 300px; }
+  .btn-allow {
+    width: 100%; max-width: 280px; padding: 16px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none; border-radius: 14px;
+    color: #fff; font-family: 'Space Mono', monospace; font-size: 15px; font-weight: 700;
+    cursor: pointer; transition: opacity .2s, transform .15s;
+    box-shadow: 0 8px 28px rgba(124,108,252,.4);
+  }
+  .btn-allow:active { opacity: .85; transform: scale(.97); }
+  .perm-note { font-size: 11px; color: #3a3a5a; text-align: center; line-height: 1.6; max-width: 280px; }
+
+  /* ── ERROR / INFO MODAL ── */
+  #errModal {
+    position: fixed; inset: 0; background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center; z-index: 200; padding: 24px;
+  }
+  #errModal.hidden { display: none; }
+  .err-box {
+    background: var(--card); border: 1px solid #ff4466; border-radius: 20px;
+    padding: 28px 24px; max-width: 340px; width: 100%; text-align: center; display: flex; flex-direction: column; gap: 14px;
+  }
+  .err-icon { font-size: 40px; }
+  .err-title { font-family: 'Space Mono', monospace; font-size: 16px; color: #ff4466; }
+  .err-msg { font-size: 13px; color: var(--muted); line-height: 1.6; }
+  .err-steps { background: var(--surface); border-radius: 12px; padding: 12px 14px; text-align: left; font-size: 12px; color: var(--muted); line-height: 1.8; }
+  .err-steps b { color: var(--text); }
+  .btn-err-retry {
+    padding: 12px; background: var(--accent); border: none; border-radius: 12px;
+    color: #fff; font-family: 'Space Mono', monospace; font-size: 13px; cursor: pointer;
+    transition: opacity .2s;
+  }
+  .btn-err-retry:active { opacity: .8; }
+  .btn-err-close {
+    padding: 10px; background: transparent; border: 1px solid var(--border); border-radius: 12px;
+    color: var(--muted); font-size: 13px; cursor: pointer;
+  }
+
+  /* ── HTTPS WARNING ── */
+  #httpsWarn {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px; padding: 32px; z-index: 300;
+  }
+  #httpsWarn.hidden { display: none; }
+  .warn-icon { font-size: 56px; }
+  .warn-title { font-family: 'Space Mono', monospace; font-size: 18px; color: #ffaa33; text-align: center; }
+  .warn-desc { font-size: 13px; color: var(--muted); text-align: center; line-height: 1.7; max-width: 300px; }
+  .btn-warn-continue {
+    padding: 12px 32px; background: transparent; border: 1px solid var(--accent); border-radius: 12px;
+    color: var(--accent); font-size: 13px; cursor: pointer; font-family: 'Space Mono', monospace;
+  }
+</style>
+</head>
+<body>
+
+<!-- HTTPS Warning -->
+<div id="httpsWarn" class="hidden">
+  <div class="warn-icon">🔒</div>
+  <div class="warn-title">HTTPS Required</div>
+  <div class="warn-desc">Camera access requires a secure connection (HTTPS). If you opened this file directly from your phone's storage, try serving it from a local server or use a browser that supports file:// camera access.<br><br>On Android: use Chrome. On iOS: use Safari.</div>
+  <button class="btn-warn-continue" onclick="document.getElementById('httpsWarn').classList.add('hidden')">Continue Anyway</button>
+</div>
+
+<!-- Loading overlay -->
+<div id="loadingOverlay" class="hidden">
+  <div class="load-spinner"></div>
+  <div class="load-text" id="loadText">Loading AI model…<br><span style="font-size:11px;color:#3a3a5a">MediaPipe Hands · WASM · WebGL</span></div>
+</div>
+
+<!-- Permission screen -->
+<div id="permScreen" class="hidden">
+  <div class="perm-icon">📷</div>
+  <div class="perm-title">Camera Access</div>
+  <div class="perm-desc">GestureAI needs your camera to detect hand gestures in real-time. A permission popup will appear — tap <strong style="color:var(--text)">Allow</strong>.</div>
+  <button class="btn-allow" id="btnAllow" onclick="requestCam()">📷 Allow Camera & Start</button>
+  <div class="perm-note">Runs 100% on-device · Nothing is uploaded · Works offline after first load</div>
+</div>
+
+<!-- Error modal -->
+<div id="errModal" class="hidden">
+  <div class="err-box">
+    <div class="err-icon">⚠️</div>
+    <div class="err-title" id="errTitle">Camera Error</div>
+    <div class="err-msg" id="errMsg">Could not access camera.</div>
+    <div class="err-steps" id="errSteps"></div>
+    <button class="btn-err-retry" onclick="retryCamera()">↻ Try Again</button>
+    <button class="btn-err-close" onclick="document.getElementById('errModal').classList.add('hidden')">Dismiss</button>
+  </div>
+</div>
+
+<!-- ═══ START SCREEN ═══ -->
+<div id="startScreen" class="screen">
+  <div class="start-topbar">
+    <div class="app-brand">Gesture<span>AI</span></div>
+    <button class="btn-exit" onclick="exitApp()">✕ EXIT</button>
+  </div>
+  <div class="start-body">
+    <div class="hero-icon">🖐</div>
+    <div>
+      <div class="hero-title">GestureAI</div>
+      <div style="height:6px"></div>
+      <div class="hero-sub">Real-time hand gesture recognition powered by on-device AI. No internet required after load.</div>
+    </div>
+    <div class="gesture-grid">
+      <div class="gesture-chip"><span class="emoji">✋</span><div><div class="gname">Open Palm</div><div class="gdesc">All fingers up</div></div></div>
+      <div class="gesture-chip"><span class="emoji">✊</span><div><div class="gname">Fist</div><div class="gdesc">All fingers curled</div></div></div>
+      <div class="gesture-chip"><span class="emoji">👍</span><div><div class="gname">Thumbs Up</div><div class="gdesc">Thumb extended</div></div></div>
+      <div class="gesture-chip"><span class="emoji">✌️</span><div><div class="gname">Peace / V</div><div class="gdesc">Index + middle</div></div></div>
+      <div class="gesture-chip"><span class="emoji">👆</span><div><div class="gname">Pointing</div><div class="gdesc">Index only</div></div></div>
+      <div class="gesture-chip"><span class="emoji">🤘</span><div><div class="gname">Rock On</div><div class="gdesc">Index + pinky</div></div></div>
+      <div class="gesture-chip"><span class="emoji">👌</span><div><div class="gname">OK Sign</div><div class="gdesc">Pinch circle</div></div></div>
+      <div class="gesture-chip"><span class="emoji">🤙</span><div><div class="gname">Call Me</div><div class="gdesc">Thumb + pinky</div></div></div>
+    </div>
+    <button class="btn-start" onclick="startApp()">▶ START DETECTING</button>
+    <div style="font-size:11px;color:#3a3a5a;text-align:center">On-device AI · No cloud · Works offline</div>
+  </div>
+  <div class="start-footer">
+    <div class="profile-img" id="profileImg">🧑</div>
+    <div class="footer-credit">
+      <strong>Arkaprabha Kar</strong>
+      App designed and created by Arkaprabha Kar
+    </div>
+  </div>
+</div>
+
+<!-- ═══ APP SCREEN ═══ -->
+<div id="appScreen" class="screen hidden">
+  <div class="app-topbar">
+    <div class="app-title">🖐 GestureAI</div>
+    <button class="btn-back" onclick="goBack()">← Back</button>
+  </div>
+  <div class="cam-wrap" id="camWrap">
+    <video id="video" autoplay playsinline muted webkit-playsinline></video>
+    <canvas id="canvas"></canvas>
+    <div class="status-badge"><div class="status-dot" id="statusDot"></div><span id="statusText">Starting…</span></div>
+    <div class="hand-count" id="handCount">0 hands</div>
+  </div>
+  <div class="gesture-panel">
+    <div class="gesture-display" id="gestureDisplay">
+      <div class="gesture-big-emoji" id="gestureEmoji">🖐</div>
+      <div class="gesture-info">
+        <div class="gesture-label" id="gestureLabel">Waiting…</div>
+        <div class="gesture-desc" id="gestureDesc">Show your hand to the camera</div>
+        <div class="gesture-conf" id="gestureConf"></div>
+      </div>
+    </div>
+    <div class="finger-states">
+      <div class="finger-states-title">FINGER STATES</div>
+      <div class="fingers-row">
+        <div class="finger-item"><div class="finger-circle" id="fThumb">👍</div><div class="finger-name">Thumb</div></div>
+        <div class="finger-item"><div class="finger-circle" id="fIndex">☝️</div><div class="finger-name">Index</div></div>
+        <div class="finger-item"><div class="finger-circle" id="fMiddle">🖕</div><div class="finger-name">Middle</div></div>
+        <div class="finger-item"><div class="finger-circle" id="fRing">💍</div><div class="finger-name">Ring</div></div>
+        <div class="finger-item"><div class="finger-circle" id="fPinky">🤙</div><div class="finger-name">Pinky</div></div>
+      </div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-val" id="statFps">0</div><div class="stat-key">FPS</div></div>
+      <div class="stat-card"><div class="stat-val" id="statTotal">0</div><div class="stat-key">Detected</div></div>
+      <div class="stat-card"><div class="stat-val" id="statHands">0</div><div class="stat-key">Hands</div></div>
+    </div>
+    <div class="history-wrap">
+      <div class="history-title">RECENT GESTURES</div>
+      <div class="history-chips" id="historyChips"><span style="font-size:12px;color:#3a3a5a">None yet…</span></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1620248257/drawing_utils.js" crossorigin="anonymous"></script>
+
+<script>
+/* ─── DOM ─── */
+const startScreen    = document.getElementById('startScreen');
+const appScreen      = document.getElementById('appScreen');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const permScreen     = document.getElementById('permScreen');
+const errModal       = document.getElementById('errModal');
+const video          = document.getElementById('video');
+const canvas         = document.getElementById('canvas');
+const ctx            = canvas.getContext('2d');
+const statusDot      = document.getElementById('statusDot');
+const statusText     = document.getElementById('statusText');
+const handCount      = document.getElementById('handCount');
+const gestureDisplay = document.getElementById('gestureDisplay');
+const gestureEmoji   = document.getElementById('gestureEmoji');
+const gestureLabel   = document.getElementById('gestureLabel');
+const gestureDesc    = document.getElementById('gestureDesc');
+const gestureConf    = document.getElementById('gestureConf');
+const historyChips   = document.getElementById('historyChips');
+const statFps        = document.getElementById('statFps');
+const statTotal      = document.getElementById('statTotal');
+const statHands      = document.getElementById('statHands');
+const fEls           = {
+  thumb:  document.getElementById('fThumb'),
+  index:  document.getElementById('fIndex'),
+  middle: document.getElementById('fMiddle'),
+  ring:   document.getElementById('fRing'),
+  pinky:  document.getElementById('fPinky')
+};
+
+/* ─── State ─── */
+let hands, mpCamera;
+let totalDetected = 0;
+let gestureHistory = [];
+let lastGesture = '';
+let fpsArr = [];
+let lastFrame = performance.now();
+let modelReady = false;
+let camStream = null;
+let appStarted = false;
+let detectionRunning = false;
+
+/* ─── Gestures ─── */
+const GESTURES = {
+  'Open Palm':  { emoji:'✋', desc:'All five fingers extended',   fingers:[1,1,1,1,1] },
+  'Fist':       { emoji:'✊', desc:'All fingers curled in',       fingers:[0,0,0,0,0] },
+  'Thumbs Up':  { emoji:'👍', desc:'Thumb up, others curled',    fingers:[1,0,0,0,0] },
+  'Peace / V':  { emoji:'✌️', desc:'Index & middle extended',    fingers:[0,1,1,0,0] },
+  'Pointing':   { emoji:'👆', desc:'Only index finger up',       fingers:[0,1,0,0,0] },
+  'Rock On':    { emoji:'🤘', desc:'Index & pinky extended',     fingers:[0,1,0,0,1] },
+  'OK Sign':    { emoji:'👌', desc:'Thumb & index pinch',        fingers:null },
+  'Call Me':    { emoji:'🤙', desc:'Thumb & pinky extended',     fingers:[1,0,0,0,1] },
+  'Three':      { emoji:'3️⃣', desc:'Three fingers up',          fingers:[0,1,1,1,0] },
+  'Four':       { emoji:'4️⃣', desc:'Four fingers up',           fingers:[0,1,1,1,1] },
+  'Thumb Down': { emoji:'👎', desc:'Thumb down gesture',         fingers:null },
+  'Spider-Man': { emoji:'🕷',  desc:'Index, middle & pinky',     fingers:[0,1,1,0,1] },
+  'Gun':        { emoji:'🔫', desc:'Index + thumb out',          fingers:[1,1,0,0,0] },
+};
+
+const LM = {
+  WRIST:0,THUMB_CMC:1,THUMB_MCP:2,THUMB_IP:3,THUMB_TIP:4,
+  INDEX_MCP:5,INDEX_PIP:6,INDEX_DIP:7,INDEX_TIP:8,
+  MIDDLE_MCP:9,MIDDLE_PIP:10,MIDDLE_DIP:11,MIDDLE_TIP:12,
+  RING_MCP:13,RING_PIP:14,RING_DIP:15,RING_TIP:16,
+  PINKY_MCP:17,PINKY_PIP:18,PINKY_DIP:19,PINKY_TIP:20
+};
+
+function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+
+function classifyGesture(lm, hand){
+  const isRight = hand === 'Right';
+  const thumb  = isRight ? lm[LM.THUMB_TIP].x < lm[LM.THUMB_IP].x : lm[LM.THUMB_TIP].x > lm[LM.THUMB_IP].x;
+  const index  = lm[LM.INDEX_TIP].y  < lm[LM.INDEX_PIP].y;
+  const middle = lm[LM.MIDDLE_TIP].y < lm[LM.MIDDLE_PIP].y;
+  const ring   = lm[LM.RING_TIP].y   < lm[LM.RING_PIP].y;
+  const pinky  = lm[LM.PINKY_TIP].y  < lm[LM.PINKY_PIP].y;
+  const fingers = [+thumb,+index,+middle,+ring,+pinky];
+
+  const okDist = dist(lm[LM.THUMB_TIP], lm[LM.INDEX_TIP]);
+  if(okDist < 0.07 && middle && ring && pinky) return {name:'OK Sign', fingers};
+
+  if(thumb && !index && !middle && !ring && !pinky){
+    return lm[LM.THUMB_TIP].y > lm[LM.WRIST].y + 0.05
+      ? {name:'Thumb Down', fingers}
+      : {name:'Thumbs Up', fingers};
+  }
+
+  const match = Object.entries(GESTURES).find(([,g]) => {
+    if(!g.fingers) return false;
+    return g.fingers.every((v,i) => v === fingers[i]);
+  });
+  if(match) return {name:match[0], fingers};
+  return {name: fingers.some(Boolean) ? 'Custom Pose' : 'Fist', fingers};
+}
+
+function updateGestureUI(name, fingerArr){
+  const g = GESTURES[name] || {emoji:'🤚', desc:'Custom hand pose'};
+  gestureEmoji.textContent = g.emoji;
+  gestureLabel.textContent = name;
+  gestureDesc.textContent  = g.desc;
+  gestureConf.textContent  = '● DETECTED';
+  gestureDisplay.classList.add('detected');
+  const keys = ['thumb','index','middle','ring','pinky'];
+  keys.forEach((k,i) => {
+    fEls[k].classList.toggle('open',   !!fingerArr[i]);
+    fEls[k].classList.toggle('closed', !fingerArr[i]);
+  });
+  if(name !== lastGesture && name !== 'Custom Pose'){
+    lastGesture = name;
+    totalDetected++;
+    statTotal.textContent = totalDetected;
+    gestureHistory.unshift(g.emoji+' '+name);
+    if(gestureHistory.length > 8) gestureHistory.pop();
+    historyChips.innerHTML = gestureHistory.map(h=>`<span class="history-chip">${h}</span>`).join('');
+  }
+}
+
+function clearGestureUI(){
+  gestureEmoji.textContent = '🖐';
+  gestureLabel.textContent = 'Waiting…';
+  gestureDesc.textContent  = 'Show your hand to the camera';
+  gestureConf.textContent  = '';
+  gestureDisplay.classList.remove('detected');
+  lastGesture = '';
+  Object.values(fEls).forEach(el=>el.classList.remove('open','closed'));
+}
+
+/* ─── MediaPipe results ─── */
+function onResults(results){
+  const now = performance.now();
+  const dt = now - lastFrame; lastFrame = now;
+  fpsArr.push(1000/dt);
+  if(fpsArr.length > 15) fpsArr.shift();
+  statFps.textContent = Math.round(fpsArr.reduce((a,b)=>a+b,0)/fpsArr.length);
+
+  canvas.width  = video.videoWidth  || video.offsetWidth  || 640;
+  canvas.height = video.videoHeight || video.offsetHeight || 480;
+
+  ctx.save();
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const n = results.multiHandLandmarks ? results.multiHandLandmarks.length : 0;
+  handCount.textContent = n + (n===1?' hand':' hands');
+  statHands.textContent = n;
+
+  if(n === 0){ clearGestureUI(); ctx.restore(); return; }
+
+  results.multiHandLandmarks.forEach((lm, i) => {
+    const handedness = results.multiHandedness[i].label;
+    drawConnectors(ctx, lm, HAND_CONNECTIONS, {color:'rgba(124,108,252,0.6)', lineWidth:2});
+    drawLandmarks(ctx,  lm, {color:'#fc6cc8', fillColor:'rgba(252,108,200,0.3)', lineWidth:1, radius:4});
+    if(i===0){
+      const {name, fingers} = classifyGesture(lm, handedness);
+      updateGestureUI(name, fingers);
+    }
+  });
+  ctx.restore();
+}
+
+/* ─── Init MediaPipe ─── */
+function initMediaPipe(){
+  document.getElementById('loadText').innerHTML = 'Loading AI model…<br><span style="font-size:11px;color:#3a3a5a">MediaPipe Hands · WASM · WebGL</span>';
+  loadingOverlay.classList.remove('hidden');
+
+  hands = new Hands({
+    locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${f}`
+  });
+  hands.setOptions({
+    maxNumHands: 2,
+    modelComplexity: 1,
+    minDetectionConfidence: 0.65,
+    minTrackingConfidence: 0.55
+  });
+  hands.onResults(onResults);
+
+  hands.initialize()
+    .then(() => {
+      modelReady = true;
+      loadingOverlay.classList.add('hidden');
+      permScreen.classList.remove('hidden');
+    })
+    .catch(e => {
+      loadingOverlay.classList.add('hidden');
+      showError('Model Load Failed', 'MediaPipe could not load. Check your internet connection for the first load.',
+        '<b>Fix:</b> Make sure you have internet the first time you use the app so the model downloads and caches.');
+    });
+}
+
+/* ─── CAMERA — robust multi-fallback ─── */
+async function requestCam(){
+  const btn = document.getElementById('btnAllow');
+  btn.textContent = '⏳ Requesting…';
+  btn.disabled = true;
+
+  // Constraint sets — try in order, most specific → most permissive
+  const constraintSets = [
+    // 1) Ideal front camera with resolution
+    { video: { facingMode: { ideal: 'user' }, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false },
+    // 2) Front camera, no resolution
+    { video: { facingMode: 'user' }, audio: false },
+    // 3) Exact environment (rear) fallback
+    { video: { facingMode: 'environment' }, audio: false },
+    // 4) Any camera, no constraints at all
+    { video: true, audio: false },
+  ];
+
+  let stream = null;
+  let lastErr = null;
+
+  for(const constraints of constraintSets){
+    try {
+      stream = await navigator.mediaDevices.getUserMedia(constraints);
+      break; // success
+    } catch(e){
+      lastErr = e;
+      console.warn('Camera attempt failed:', constraints, e.name, e.message);
+    }
+  }
+
+  btn.textContent = '📷 Allow Camera & Start';
+  btn.disabled = false;
+
+  if(!stream){
+    handleCamError(lastErr);
+    return;
+  }
+
+  camStream = stream;
+  video.srcObject = stream;
+
+  // Robust play — handle both promise and callback style
+  try {
+    await video.play();
+  } catch(e){
+    // Some browsers need user gesture; video.play() may fail silently on mobile
+    // The video will still play because of autoplay + playsinline attributes
+    console.warn('video.play() error (usually safe to ignore):', e.message);
+  }
+
+  permScreen.classList.add('hidden');
+  startDetection();
+}
+
+function handleCamError(err){
+  let title = 'Camera Error';
+  let msg = '';
+  let steps = '';
+
+  if(!err){
+    msg = 'No camera was found on this device.';
+    steps = '<b>Check:</b> Does your device have a camera?';
+  } else if(err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError'){
+    title = 'Permission Denied';
+    msg = 'Camera access was blocked. You need to allow it manually.';
+    steps = `<b>Android Chrome:</b> Tap the 🔒 lock icon in the address bar → Site settings → Camera → Allow<br><br>
+             <b>iOS Safari:</b> Settings → Safari → Camera → Allow<br><br>
+             Then tap "Try Again" below.`;
+  } else if(err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError'){
+    title = 'No Camera Found';
+    msg = 'Your browser could not find a camera.';
+    steps = '<b>Fix:</b> Make sure no other app is using the camera, then try again.';
+  } else if(err.name === 'NotReadableError' || err.name === 'TrackStartError'){
+    title = 'Camera In Use';
+    msg = 'The camera is being used by another app.';
+    steps = '<b>Fix:</b> Close other apps using the camera (video calls, camera app), then tap Try Again.';
+  } else if(err.name === 'OverconstrainedError'){
+    title = 'Camera Constraint Error';
+    msg = 'Could not match camera requirements.';
+    steps = '<b>Fix:</b> Tap Try Again — the app will use any available camera.';
+  } else if(err.name === 'SecurityError'){
+    title = 'Security Error';
+    msg = 'Camera blocked due to security policy. This file must be served over HTTPS or localhost.';
+    steps = `<b>Fix:</b> Open this file through a web server (not directly from file:///).<br>
+             Try using a QR code server or uploading to GitHub Pages.`;
+  } else {
+    msg = err.message || 'Unknown camera error.';
+    steps = '<b>Error:</b> ' + (err.name || 'Unknown') + ' — try refreshing the page.';
+  }
+
+  showError(title, msg, steps);
+}
+
+function showError(title, msg, steps){
+  document.getElementById('errTitle').textContent = title;
+  document.getElementById('errMsg').textContent = msg;
+  document.getElementById('errSteps').innerHTML = steps || '';
+  errModal.classList.remove('hidden');
+}
+
+function retryCamera(){
+  errModal.classList.add('hidden');
+  requestCam();
+}
+
+/* ─── Start detection loop ─── */
+function startDetection(){
+  statusDot.classList.add('live');
+  statusText.textContent = 'Live';
+  detectionRunning = true;
+
+  // Use requestAnimationFrame loop instead of MediaPipe Camera utility
+  // — more reliable on Android mobile browsers
+  async function detectFrame(){
+    if(!detectionRunning) return;
+    if(modelReady && video.readyState >= 2 && !video.paused && !video.ended){
+      try { await hands.send({image: video}); } catch(e){}
+    }
+    requestAnimationFrame(detectFrame);
+  }
+  detectFrame();
+
+  // Sync canvas size to video element
+  const ro = new ResizeObserver(() => {
+    canvas.style.width  = video.offsetWidth  + 'px';
+    canvas.style.height = video.offsetHeight + 'px';
+  });
+  ro.observe(video);
+}
+
+function stopDetection(){
+  detectionRunning = false;
+  if(camStream){
+    camStream.getTracks().forEach(t => { try{ t.stop(); }catch(e){} });
+    camStream = null;
+  }
+  video.srcObject = null;
+  if(hands){ try{ hands.close(); }catch(e){} hands = null; }
+  modelReady = false;
+  statusDot.classList.remove('live');
+  statusText.textContent = 'Stopped';
+}
+
+/* ─── Navigation ─── */
+function startApp(){
+  startScreen.classList.add('hidden');
+  appScreen.classList.remove('hidden');
+  if(!appStarted){
+    appStarted = true;
+    initMediaPipe();
+  } else {
+    permScreen.classList.remove('hidden');
+  }
+}
+
+function goBack(){
+  stopDetection();
+  appScreen.classList.add('hidden');
+  startScreen.classList.remove('hidden');
+  appStarted = false;
+  clearGestureUI();
+  statFps.textContent = '0';
+  statTotal.textContent = '0';
+  statHands.textContent = '0';
+  historyChips.innerHTML = '<span style="font-size:12px;color:#3a3a5a">None yet…</span>';
+  gestureHistory = []; totalDetected = 0; lastGesture = '';
+}
+
+function exitApp(){
+  if(confirm('Exit GestureAI?')) window.close();
+}
+
+/* ─── Boot: check API availability & HTTPS ─── */
+window.addEventListener('load', () => {
+  // Check if getUserMedia is available
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    // Try legacy API
+    navigator.mediaDevices = navigator.mediaDevices || {};
+    navigator.mediaDevices.getUserMedia = function(c){
+      const legacy = navigator.getUserMedia || navigator.webkitGetUserMedia ||
+                     navigator.mozGetUserMedia || navigator.msGetUserMedia;
+      if(!legacy) return Promise.reject(new Error('getUserMedia not supported'));
+      return new Promise((res,rej) => legacy.call(navigator, c, res, rej));
+    };
+  }
+
+  // Warn if not HTTPS (file:// is allowed on some Android browsers)
+  const proto = location.protocol;
+  if(proto !== 'https:' && proto !== 'file:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1'){
+    document.getElementById('httpsWarn').classList.remove('hidden');
+  }
+});
+</script>
+</body>
+</html>
